@@ -27,7 +27,7 @@ def encode_image(image_path):
     with open(image_path, 'rb') as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
 
-local_image = './gpt4v/images/parking_lot.png'
+local_image = './parking_lot.png'
 
 response = client.chat.completions.create(
     model = model,
@@ -42,8 +42,8 @@ response = client.chat.completions.create(
             {
                 "type": "image_url",
                 "image_url": {
-                    "url": "https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/75296/05bf036e-8dc5-c99d-58d9-e72699c77c74.png"
-                    # "url": f"data:image/png;base64,{encode_image(local_image)}"
+                    # "url": "https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/75296/05bf036e-8dc5-c99d-58d9-e72699c77c74.png"
+                    "url": f"data:image/png;base64,{encode_image(local_image)}"
                 }
             }
         ]}
