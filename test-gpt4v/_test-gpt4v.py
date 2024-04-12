@@ -27,7 +27,7 @@ def encode_image(image_path):
     with open(image_path, 'rb') as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
 
-local_image = './parking_lot.png'
+local_image = './images/parking_lot.png'
 
 response = client.chat.completions.create(
     model = model,
