@@ -23,7 +23,12 @@ def encode_image(image_path):
 
 sys_prompt = {
     "role": "system",
-    "content": "You are a helpful multilingual assistant trained to interpret images and make responsible assumptions on internet images about people and places.",
+    "content": [
+        {
+            "type": "text",
+            "text": "You are a helpful multilingual assistant trained to interpret images and make responsible assumptions on internet images about people and places. If the question is not in English, reply using the question's language.",
+        }
+    ],
 }
 
 question = "Extract parking fee information from the picture and give me a list."
@@ -47,6 +52,7 @@ examples = [
     },
 ]
 
+
 few_shot_messages = []
 for ex in examples:
     few_shot_messages.append(
@@ -69,7 +75,7 @@ for ex in examples:
 
 # print(json.dumps(few_shot_messages, indent=4))
 
-test_image_path = './sample_images/parking-fee-test-1.png'
+test_image_path = "./sample_images/parking-fee-test-1.png"
 messages = (
     [sys_prompt]
     + few_shot_messages
@@ -89,10 +95,88 @@ messages = (
     ]
 )
 
-response = client.chat.completions.create(
-    model=model,
-    messages=messages,
-    max_tokens=800
-)
+# response = client.chat.completions.create(
+#     model=model, messages=messages, max_tokens=800
+# )
 
-print(response.choices[0].message.content)
+# print(response.choices[0].message.content)
+
+
+def create_prompt_object(text, image_url=None, role="user"):
+    prompt_object = {
+        "role": role,
+        "content": [{"type": "text", "text": text}]
+        + (
+            [
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/png;base64,{encode_image(image_url)}"
+                        # "url": image_url
+                    },
+                }
+            ]
+            if image_url
+            else []
+        ),
+    }
+    return prompt_object
+
+system_prompt = "You are a helpful multilingual assistant trained to interpret images. You can make responsible assumptions on internet images about people and places. If the question is not in English, reply using the question's language."
+
+
+def get_response(msgs, m=model):
+    return client.chat.completions.create(
+        model=m,
+        messages=msgs,
+        max_tokens=2000
+    )
+    
+def zero_shot(question, image_url, sys_prompt="You are a helpful assistant."):
+    msgs = []
+    sys_prompt = create_prompt_object(sys_prompt, role="system")
+    msgs.append(sys_prompt)
+    user_message = create_prompt_object(question, image_url)
+    msgs.append(user_message)
+    # print("\n===== zero shot ===== \n")
+    # print(json.dumps(msgs, indent=4))
+    response = get_response(msgs)
+    return response
+
+def one_shot(question, image_url, example, sys_prompt="You are a helpful assistant."):
+    msgs = []
+    sys_prompt = create_prompt_object(sys_prompt, role="system")
+    msgs.append(sys_prompt)
+    # one shot example
+    msgs.append(create_prompt_object(text=question, image_url=example['image_path']))
+    msgs.append(create_prompt_object(text=example['output'], role='assistant'))
+    user_message = create_prompt_object(question, image_url)
+    msgs.append(user_message)
+    # print('\n===== one shot =====\n')
+    # print(json.dumps(msgs, indent=4))
+    response = get_response(msgs)
+    return response
+    
+def few_shot(question, image_url, examples, sys_prompt="You are a helpful assistant."):
+    msgs = []
+    sys_prompt = create_prompt_object(sys_prompt, role="system")
+    msgs.append(sys_prompt)
+    for ex in examples:
+        msgs.append(create_prompt_object(text=question, image_url=ex['image_path']))
+        msgs.append(create_prompt_object(text=ex['output'], role='assistant'))
+    user_message = create_prompt_object(question, image_url)
+    msgs.append(user_message)
+    # print("\n===== few shot =====\n")
+    # print(json.dumps(msgs, indent=4))
+    response = get_response(msgs)
+    return response
+    
+    
+
+
+# response = zero_shot(question, test_image_path, system_prompt)
+# print(response.choices[0].message.content)
+
+zero_shot(question, test_image_path, system_prompt)
+one_shot(question, test_image_path, examples[0], system_prompt)
+few_shot(question, test_image_path, examples, system_prompt)
