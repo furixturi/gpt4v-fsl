@@ -3,7 +3,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import os, base64, json, logging, time, asyncio
-from openai import AzureOpenAI
+# from openai import AzureOpenAI
+from openai import AsyncAzureOpenAI
 
 
 class FewShotLearning:
@@ -16,7 +17,7 @@ class FewShotLearning:
         max_tokens=2000,
         test_image_url=None,
     ):
-        self.client = AzureOpenAI(
+        self.client = AsyncAzureOpenAI(
             api_key=(
                 configs["api_key"]
                 if "api_key" in configs
@@ -47,7 +48,7 @@ class FewShotLearning:
         self.test_image_url = test_image_url
         self.max_tokens = max_tokens
 
-        # log to
+        # log to console
         self.logger = logging.getLogger("FewShotLearning")
         self.logger.setLevel(logging.INFO)
         ch = logging.StreamHandler()
@@ -84,13 +85,13 @@ class FewShotLearning:
 
         return prompt_object
 
-    def get_response(self, msgs):
-        return self.client.chat.completions.create(
+    async def get_response(self, msgs):
+        return await self.client.chat.completions.create(
             model=self.model, messages=msgs, max_tokens=self.max_tokens
         )
 
     # main logic implementation
-    def zero_shot(self):
+    async def zero_shot(self):
         msgs = []
         sys_prompt = self.create_prompt_object(self.system_prompt, role="system")
         msgs.append(sys_prompt)
@@ -104,7 +105,7 @@ class FewShotLearning:
         self.logger.debug(json.dumps(msgs, indent=4))
 
         # send request to model endpoint
-        response = self.get_response(msgs)
+        response = await self.get_response(msgs)
 
         # log response
         received_time = time.time()
@@ -117,7 +118,7 @@ class FewShotLearning:
 
         return response
 
-    def one_shot(self, example=None):
+    async def one_shot(self, example=None):
         msgs = []
         sys_prompt = self.create_prompt_object(self.system_prompt, role="system")
         msgs.append(sys_prompt)
@@ -142,7 +143,7 @@ class FewShotLearning:
         self.logger.debug(json.dumps(msgs, indent=4))
 
         # send request to model endpoint
-        response = self.get_response(msgs)
+        response = await self.get_response(msgs)
 
         # log response
         received_time = time.time()
@@ -154,7 +155,7 @@ class FewShotLearning:
 
         return response
 
-    def few_shot(self):
+    async def few_shot(self):
         msgs = []
         sys_prompt = self.create_prompt_object(self.system_prompt, role="system")
         msgs.append(sys_prompt)
@@ -178,7 +179,7 @@ class FewShotLearning:
         self.logger.debug(json.dumps(msgs, indent=4))
 
         # send request to model endpoint
-        response = self.get_response(msgs)
+        response = await self.get_response(msgs)
 
         # log response
         received_time = time.time()
@@ -188,8 +189,15 @@ class FewShotLearning:
         self.logger.debug("Few shot response:")
         self.logger.debug(response)
         return response
+    
+    async def run_all_shots(self, example=None):
+        task_0 = asyncio.create_task(self.zero_shot())
+        task_1 = asyncio.create_task(self.one_shot(example=example))
+        task_few = asyncio.create_task(self.few_shot())
+        responses = await asyncio.gather(task_0, task_1, task_few)
+        return responses
 
-
+# Test it
 if __name__ == "__main__":
     # variables
     question = "Extract parking fee information from the picture and give me a list."
@@ -216,9 +224,17 @@ if __name__ == "__main__":
     fsl = FewShotLearning(
         examples=examples, question=question, test_image_url=test_image_path
     )
-    response = fsl.zero_shot()
-    print(response.choices[0].message.content)
-    response_1 = fsl.one_shot()
-    print(response_1.choices[0].message.content)
-    response_2 = fsl.few_shot()
-    print(response_2.choices[0].message.content)
+    
+    ## Sequential
+    # response = asyncio.run(fsl.zero_shot())
+    # print(response.choices[0].message.content)
+    # response_1 = asyncio.run(fsl.one_shot())
+    # print(response_1.choices[0].message.content)
+    # response_2 = asyncio.run(fsl.few_shot())
+    # print(response_2.choices[0].message.content)
+    
+    # Concurrent
+    responses = asyncio.run(fsl.run_all_shots())
+    for idx, res in enumerate(responses):
+        print(f'==== {idx} ====')
+        print(res.choices[0].message.content)
