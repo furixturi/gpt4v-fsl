@@ -1,4 +1,4 @@
-from fsl import FewShotLearning
+from gpt4v_fsl import FewShotLearning
 import asyncio
 
 # Test it
