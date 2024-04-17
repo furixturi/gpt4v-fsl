@@ -48,7 +48,9 @@ class FewShotLearning:
         self.max_tokens = max_tokens
 
         # log to console
-        self.logger = logging.getLogger("FewShotLearning")
+        self.logger = logging.getLogger()
+        if self.logger.hasHandlers():
+            self.logger.handlers.clear()
         self.logger.setLevel(logging.INFO)
         ch = logging.StreamHandler()
         ch.setLevel(logging.INFO)
