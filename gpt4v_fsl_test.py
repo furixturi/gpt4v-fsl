@@ -1,5 +1,13 @@
 from gpt4v_fsl import FewShotLearning
 import asyncio
+import argparse
+from utilities import video_utilities as vu
+import cv2
+
+# Collect runtime arguments
+parser = argparse.ArgumentParser(description='Few-shot learning with GPT-4 V')
+parser.add_argument('-i', '--image_path', type=str, default='./sample_images/parking-fee-test-1.png', help='Path to the query image')
+args = parser.parse_args()
 
 # Test it
 if __name__ == "__main__":
@@ -23,10 +31,9 @@ if __name__ == "__main__":
             "output": "-110 yen / 20 min\n- 8:00-19:00 max 880 yen\n- 19:00-8:00 max 440 yen",
         },
     ]
-    test_image_path = "./sample_images/parking-fee-test-1.png"
 
     fsl = FewShotLearning(
-        examples=examples, question=question, test_image_url=test_image_path
+        examples=examples, question=question, test_image_url=args.image_path
     )
     
     ## Sequential
@@ -40,5 +47,9 @@ if __name__ == "__main__":
     # Concurrent
     responses = asyncio.run(fsl.run_all_shots())
     for idx, res in enumerate(responses):
-        print(f'==== {idx} ====')
+        label = ['Zero-shot', 'One-shot', 'Few-shot']
+        print(f'\n==== {label[idx]} ====')
         print(res.choices[0].message.content)
+
+    # Display the query image
+    vu.display_image(cv2.imread(args.image_path))
